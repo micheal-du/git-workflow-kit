@@ -35,16 +35,16 @@ jobs:
         with:
           host: ${{ secrets.PROD_SERVER_IP }}  # 生产服务器的 IP 地址
           username: ${{ secrets.PROD_SERVER_USER }}  # 生产服务器的用户名
-          key: ${{ secrets.c }}  # 生产服务器的 SSH 私钥
+          key: ${{ secrets.PROD_SERVER_SSH_KEY }}  # 生产服务器的 SSH 私钥
           port: 22  # 生产服务器的 SSH 端口
           source: "dist/*"  # 构建后的文件路径
-          target: "/path/to/production/directory"  # 生产服务器目标路径
+          target: "/path/to/production/directory""  # 生产服务器目标路径
 
       - name: Restart nginx on server
         uses: appleboy/ssh-action@v1.0.0  # 第六步：通过 SSH 重启服务器上的 nginx 服务
         with:
           host: ${{ secrets.PROD_SERVER_IP }}  # 服务器 IP，从 GitHub Secrets 获取
           username: ${{ secrets.PROD_SERVER_USER }}  # 服务器用户名，从 GitHub Secrets 获取
-          key: ${{ secrets.PROD_SERVER_USER }}  # SSH 私钥，从 GitHub Secrets 获取
+          key: ${{ secrets.PROD_SERVER_SSH_KEY }}  # SSH 私钥，从 GitHub Secrets 获取
           port: 22  # 服务器 SSH 端口
           script: sudo systemctl restart nginx  # 远程执行 nginx 重启命令
