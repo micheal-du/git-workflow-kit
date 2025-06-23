@@ -28,6 +28,7 @@ jobs:
             ${{ runner.os }}-node-
 
       - name: Install dependencies
+        echo "开始安装依赖"
         run: npm i  # 第三步：安装依赖
 
       - name: Build project
