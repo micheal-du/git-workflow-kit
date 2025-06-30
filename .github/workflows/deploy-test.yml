@@ -1,5 +1,5 @@
 # 文件路径：.github/workflows/reusable-deploy-static-site.yml
-name: Reusable: Build and Deploy Static Site
+name: "Reusable: Build and Deploy Static Site"
 
 on:
   workflow_call:
