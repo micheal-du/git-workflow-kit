@@ -1,0 +1,89 @@
+name: Reusable Deploy to Production (Symlink Versioning)
+
+on:
+  workflow_call:
+    inputs:
+      build_command:
+        description: '构建命令（生产环境）'
+        required: false
+        type: string
+        default: 'npm run build:prod'
+      deploy_base:
+        description: '部署基础路径（如 /opt/myproject）'
+        required: true
+        type: string
+
+    secrets:
+      SERVER_IP:
+        required: true
+      SERVER_USER:
+        required: true
+      SERVER_SSH_KEY:
+        required: true
+
+jobs:
+  deploy-with-symlink:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          submodules: true
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
+
+      - name: Cache node_modules
+        uses: actions/cache@v4
+        with:
+          path: node_modules
+          key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-node-
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Build project
+        run: ${{ inputs.build_command }}
+
+      - name: Generate timestamp for release
+        id: release
+        run: echo "ts=$(date +'%Y%m%d-%H%M%S')" >> $GITHUB_OUTPUT
+
+      - name: Upload dist to remote release path
+        uses: appleboy/scp-action@v0.1.4
+        with:
+          host: ${{ secrets.SERVER_IP }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SERVER_SSH_KEY }}
+          port: 22
+          source: "dist/*"
+          target: "/tmp/temp-deploy-${{ steps.release.outputs.ts }}"
+
+      - name: Move files and update symlink
+        uses: appleboy/ssh-action@v1.0.0
+        with:
+          host: ${{ secrets.SERVER_IP }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SERVER_SSH_KEY }}
+          port: 22
+          script: |
+            TS=${{ steps.release.outputs.ts }}
+            BASE=${{ inputs.deploy_base }}
+            RELEASE_PATH="$BASE/releases/$TS"
+            mkdir -p $RELEASE_PATH
+            mv /tmp/temp-deploy-$TS/* $RELEASE_PATH/
+            ln -sfn $RELEASE_PATH $BASE/current
+
+      - name: Restart nginx
+        uses: appleboy/ssh-action@v1.0.0
+        with:
+          host: ${{ secrets.SERVER_IP }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SERVER_SSH_KEY }}
+          port: 22
+          script: sudo systemctl restart nginx
